@@ -23,6 +23,10 @@ contract CarLeasing is Ownable {
     // Mapping car ID to Rental
     mapping(uint256 => Rental) public rentals;
 
+    // Mapping car ID to earnings for distributing to correct NFT investors
+    mapping(uint256 => uint256) public earnings;
+
+
     event CarRented(
         address indexed renter,
         uint256 indexed carId,
@@ -64,6 +68,7 @@ contract CarLeasing is Ownable {
             startTime: block.timestamp,
             isActive: true
         });
+
         emit CarRented(msg.sender, carId, block.timestamp);
     }
 
@@ -74,28 +79,36 @@ contract CarLeasing is Ownable {
       uint256 rentalFee = getTotalAmountDue(carId);
         rentals[carId].isActive = false;
         require(paymentToken.balanceOf(msg.sender) >= rentalFee, "Insufficient deposited balance");
-        // Transfer rental fee to the rentWallet
         require(
             paymentToken.transferFrom(msg.sender, rentWallet, rentalFee),
             "Payment transfer failed"
         );
+
+        // Update the earnings for the carId
+        earnings[carId] += rentalFee;
+
         emit CarReturned(msg.sender, carId, block.timestamp, rentalFee);
     }
 
-    function _distributeToInvestors(uint256 tokenId, uint256 amount)
+    function _distributeToInvestors(uint256 tokenId)
         public
         onlyOwner
     {
-        require(amount >= 100e18, "amount too low");   //min 100 tokens  to distribute
+        uint256 amount = earnings[tokenId];
+        require(amount >= 100e18, "Not enough tokens earned by this token ID");   //min 100 tokens  to distribute
         address[] memory owners = carNFT.ownersOf(tokenId);
+        
         require(owners.length > 0, "No owners found for this token ID");
         uint256 amountPerOwner = amount / owners.length;
+
         for (uint256 i = 0; i < owners.length; i++) {
             require(
                 paymentToken.transferFrom(rentWallet, owners[i], amountPerOwner),
                 "Payment transfer failed"
             );
         }
+         // Reset the earnings for the tokenId after distribution
+        earnings[tokenId] = 0;
     }
 
     function getTotalAmountDue(uint256 carId) public view returns (uint256) {
