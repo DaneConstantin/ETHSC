@@ -55,6 +55,8 @@ contract CarLeasing is Ownable {
     function rentCar(uint256 carId) external {
         require(carExists(carId), "car doesn't exist");
         require(!rentals[carId].isActive, "Car is already rented");
+        require(paymentToken.balanceOf(msg.sender) >= 3_600e18, "You need at least one day's worth of tokens for renting.");
+
         rentals[carId] = Rental({
             renter: msg.sender,
             startTime: block.timestamp,
