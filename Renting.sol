@@ -13,6 +13,8 @@ contract CarLeasing is Ownable {
     CARNFTInterface public carNFT;
     IERC20 public paymentToken;
     uint256 public rentalRatePerSecond; // Fixed price per hour for leasing
+    address public rentWallet;
+
     struct Rental {
         address renter;
         uint256 startTime;
@@ -42,10 +44,12 @@ contract CarLeasing is Ownable {
         CARNFTInterface _carNFT,
         IERC20 _paymentToken,
         uint256 _rentalRatePerSecond
+
     ) Ownable(msg.sender) {
         carNFT = _carNFT;
         paymentToken = _paymentToken;
         rentalRatePerSecond = _rentalRatePerSecond;
+         rentWallet = msg.sender;
     }
 
     function rentCar(uint256 carId) external {
@@ -66,12 +70,28 @@ contract CarLeasing is Ownable {
       uint256 rentalFee = getTotalAmountDue(carId);
         rentals[carId].isActive = false;
         require(paymentToken.balanceOf(msg.sender) >= rentalFee, "Insufficient deposited balance");
-        // Transfer rental fee to the contract
-         require(
-        paymentToken.transfer(address(this), rentalFee),
-        "Payment transfer failed"
-    );
+        // Transfer rental fee to the rentWallet
+        require(
+            paymentToken.transferFrom(msg.sender, rentWallet, rentalFee),
+            "Payment transfer failed"
+        );
         emit CarReturned(msg.sender, carId, block.timestamp, rentalFee);
+    }
+
+    function _distributeToInvestors(uint256 tokenId, uint256 amount)
+        public
+        onlyOwner
+    {
+        require(amount >= 100e18, "amount too low");   //min 100 tokens  to distribute
+        address[] memory owners = carNFT.ownersOf(tokenId);
+        require(owners.length > 0, "No owners found for this token ID");
+        uint256 amountPerOwner = amount / owners.length;
+        for (uint256 i = 0; i < owners.length; i++) {
+            require(
+                paymentToken.transferFrom(rentWallet, owners[i], amountPerOwner),
+                "Payment transfer failed"
+            );
+        }
     }
 
     function getTotalAmountDue(uint256 carId) public view returns (uint256) {
@@ -82,23 +102,6 @@ contract CarLeasing is Ownable {
         return rentalFee;
     }
 
-    function _distributeToInvestors(uint256 tokenId, uint256 amount)
-        public
-        onlyOwner
-    {
-        // need improvement
-        require(amount >= 100e18, "amount too low");   //100 tokens min to distribute
-        address[] memory owners = carNFT.ownersOf(tokenId);
-        require(owners.length > 0, "No owners found for this token ID");
-        uint256 amountPerOwner = amount / owners.length;
-        for (uint256 i = 0; i < owners.length; i++) {
-            require(
-                paymentToken.transfer(owners[i], amountPerOwner),
-                "Payment transfer failed"
-            );
-        }
-    }
-
     function calculateRentalFee(uint256 duration)
         internal
         view
@@ -107,12 +110,18 @@ contract CarLeasing is Ownable {
         return (duration / 1 seconds) * rentalRatePerSecond;
     }
 
+    function carExists(uint256 id) public view returns (bool) {
+        address[] memory owners = carNFT.ownersOf(id);
+        return owners.length > 0;
+    }
+
     function updateRentalRate(uint256 newRate) external onlyOwner {
         rentalRatePerSecond = newRate;
     }
 
     function updateCarToken(address newCarToken) external onlyOwner {
         require(newCarToken != address(0), "Invalid address");
+
         address oldCarToken = address(carNFT);
         carNFT = CARNFTInterface(newCarToken);
         emit CarNFTUpdated(oldCarToken, newCarToken);
@@ -120,13 +129,10 @@ contract CarLeasing is Ownable {
 
     function updatePaymentToken(address newPaymentToken) external onlyOwner {
         require(newPaymentToken != address(0), "Invalid address");
+
         address oldPaymentToken = address(paymentToken);
         paymentToken = IERC20(newPaymentToken);
         emit PaymentTokenUpdated(oldPaymentToken, newPaymentToken);
     }
 
-    function carExists(uint256 id) public view returns (bool) {
-        address[] memory owners = carNFT.ownersOf(id);
-        return owners.length > 0;
-    }
 }
