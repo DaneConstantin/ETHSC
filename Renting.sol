@@ -43,14 +43,16 @@ contract CarLeasing is Ownable {
     constructor(
         CARNFTInterface _carNFT,
         IERC20 _paymentToken,
-        uint256 _rentalRatePerSecond
+        uint256 _rentalRatePerSecond,
+        address _rentwallet
 
     ) Ownable(msg.sender) {
         carNFT = _carNFT;
         paymentToken = _paymentToken;
         rentalRatePerSecond = _rentalRatePerSecond;
-         rentWallet = msg.sender;
+         rentWallet = _rentwallet;
     }
+
 
     function rentCar(uint256 carId) external {
         require(carExists(carId), "car doesn't exist");
