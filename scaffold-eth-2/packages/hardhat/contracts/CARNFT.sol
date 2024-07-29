@@ -54,6 +54,41 @@ contract SolidLuxuryNFT is ERC1155, Ownable, ERC1155Burnable {
          _balances[id][owner] += amount;
     }
 
+    function _removeOwner(uint256 id, address owner) internal {
+        if (_ownerExists[id][owner]) {
+            _balances[id][owner] = 0;
+            _ownerExists[id][owner] = false;
+            // Remove owner from _owners list
+            address[] storage owners = _owners[id];
+            for (uint i = 0; i < owners.length; i++) {
+                if (owners[i] == owner) {
+                    owners[i] = owners[owners.length - 1];
+                    owners.pop();
+                    break;
+                }
+            }
+        }
+    }
+
+    function _safeTransferFrom(address from, address to, uint256 id, uint256 value, bytes memory data) internal virtual override {
+        super._safeTransferFrom(from, to, id, value, data);
+
+        if (from != address(0)) { // From address is not zero, meaning it's a transfer or burn
+            _balances[id][from] -= value;
+            if (_balances[id][from] == 0) {
+                _removeOwner(id, from);
+            }
+        }
+
+        if (to != address(0)) { // To address is not zero, meaning it's a transfer or mint
+            if (!_ownerExists[id][to]) {
+                _owners[id].push(to);
+                _ownerExists[id][to] = true;
+            }
+            _balances[id][to] += value;
+        }
+    }
+    
     function uri(uint256 _id) public view override returns (string memory) {
         return tokenURI[_id];
     }

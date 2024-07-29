@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   80002: {
     CarLeasing: {
-      address: "0xd260dd8aDa12206b56f9b82B8bdD124b70Fd4D75",
+      address: "0x394e3aB3F392a6252C21FB46edBa4bEe52C0310b",
       abi: [
         {
           inputs: [
@@ -871,7 +871,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     SolidLuxuryNFT: {
-      address: "0xeFE48145a5b9A669b4bD17fEF4c3E0fe75A1C471",
+      address: "0x2C0F17383672b951B8e9dc9Eec901EEAE6934617",
       abi: [
         {
           inputs: [
