@@ -26,6 +26,11 @@ contract CarLeasing is Ownable {
     // Mapping car ID to earnings for distributing to correct NFT investors
     mapping(uint256 => uint256) public earnings;
 
+     modifier onlyRenter(uint256 carId) {
+        require(rentals[carId].isActive, "Car is not rented");
+        require(rentals[carId].renter == msg.sender, "Caller is not the renter");
+        _;
+    }
 
     event CarRented(
         address indexed renter,
@@ -38,12 +43,13 @@ contract CarLeasing is Ownable {
         uint256 endTime,
         uint256 fee
     );
-    event CarNFTUpdated(address indexed oldAddress, address indexed newAddress);
+    event NFTCollectionUpdated(address indexed oldAddress, address indexed newAddress);
     event PaymentTokenUpdated(
         address indexed oldAddress,
         address indexed newAddress
     );
-
+    event RentWalletUpdated(address indexed oldAddress, address indexed newAddress);
+    
     constructor(
         CARNFTInterface _carNFT,
         IERC20 _paymentToken,
@@ -72,25 +78,27 @@ contract CarLeasing is Ownable {
         emit CarRented(msg.sender, carId, block.timestamp);
     }
 
-    function returnCar(uint256 carId) external {
-        require(rentals[carId].isActive, "Car is not rented");
-        require(rentals[carId].renter == msg.sender, "You are not the renter");
+    function returnCar(uint256 carId) public onlyRenter(carId) {
+      
+        uint256 rentalDuration = block.timestamp - rentals[carId].startTime;
+        uint256 rentalFee = calculateRentalFee(rentalDuration);
         
-      uint256 rentalFee = getTotalAmountDue(carId);
-        rentals[carId].isActive = false;
         require(paymentToken.balanceOf(msg.sender) >= rentalFee, "Insufficient deposited balance");
         require(
             paymentToken.transferFrom(msg.sender, rentWallet, rentalFee),
             "Payment transfer failed"
         );
 
-        // Update the earnings for the carId
-        earnings[carId] += rentalFee;
+       // reset struct
+        rentals[carId].isActive = false;
+        rentals[carId].renter = address(0);
+        rentals[carId].startTime = 0;
 
+        earnings[carId] += rentalFee;   //add total earnings for that car
         emit CarReturned(msg.sender, carId, block.timestamp, rentalFee);
     }
 
-    function _distributeToInvestors(uint256 tokenId)
+    function distributeToInvestors(uint256 tokenId)
         public
         onlyOwner
     {
@@ -111,14 +119,6 @@ contract CarLeasing is Ownable {
         earnings[tokenId] = 0;
     }
 
-    function getTotalAmountDue(uint256 carId) public view returns (uint256) {
-        require(rentals[carId].isActive, "Car is not rented");
-        require(rentals[carId].renter == msg.sender, "You are not the renter");
-        uint256 rentalDuration = block.timestamp - rentals[carId].startTime;
-        uint256 rentalFee = calculateRentalFee(rentalDuration);
-        return rentalFee;
-    }
-
     function calculateRentalFee(uint256 duration)
         internal
         view
@@ -136,12 +136,12 @@ contract CarLeasing is Ownable {
         rentalRatePerSecond = newRate;
     }
 
-    function updateCarToken(address newCarToken) external onlyOwner {
-        require(newCarToken != address(0), "Invalid address");
+    function updateNFTCollection(address newNFTCollection) external onlyOwner {
+        require(newNFTCollection != address(0), "Invalid address");
 
         address oldCarToken = address(carNFT);
-        carNFT = CARNFTInterface(newCarToken);
-        emit CarNFTUpdated(oldCarToken, newCarToken);
+        carNFT = CARNFTInterface(newNFTCollection);
+        emit NFTCollectionUpdated(oldCarToken, newNFTCollection);
     }
 
     function updatePaymentToken(address newPaymentToken) external onlyOwner {
@@ -150,6 +150,15 @@ contract CarLeasing is Ownable {
         address oldPaymentToken = address(paymentToken);
         paymentToken = IERC20(newPaymentToken);
         emit PaymentTokenUpdated(oldPaymentToken, newPaymentToken);
+    }
+
+    function updateRentWallet(address newRentWallet) external onlyOwner {
+
+        require(newRentWallet != address(0), "Invalid address");
+
+        address oldRentWallet = rentWallet;
+        rentWallet = newRentWallet;
+        emit RentWalletUpdated(oldRentWallet, newRentWallet);
     }
 
 }

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 
-contract CARNFT is ERC1155, Ownable, ERC1155Burnable {
+contract SolidLuxuryNFT is ERC1155, Ownable, ERC1155Burnable {
     mapping(uint256 => string) public tokenURI;
     mapping(uint256 => uint256) public totalSupply; // track total supply on each nft(id)
     mapping(uint256 => mapping(address => uint256)) private _balances;
