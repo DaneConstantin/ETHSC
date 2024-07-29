@@ -107,7 +107,9 @@ contract CarLeasing is Ownable {
         address[] memory owners = carNFT.ownersOf(tokenId);
         
         require(owners.length > 0, "No owners found for this token ID");
-        uint256 amountPerOwner = amount / owners.length;
+
+        uint256 distributionAmount = (amount * 95) / 100;  // keep 5% to owner /company tax . distribute the 95%
+        uint256 amountPerOwner = distributionAmount / owners.length;
 
         for (uint256 i = 0; i < owners.length; i++) {
             require(
