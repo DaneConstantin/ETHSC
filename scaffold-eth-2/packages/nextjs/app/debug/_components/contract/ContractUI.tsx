@@ -82,7 +82,6 @@ export const ContractUI = ({ contractName, className = "" }: ContractUIProps) =>
               </div>
             </div>
           </div>
-          test
           <div className="z-10">
             <div className="bg-base-100 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col mt-10 relative">
               <div className="h-[5rem] w-[5.5rem] bg-base-300 absolute self-start rounded-[22px] -top-[38px] -left-[1px] -z-10 py-[0.65rem] shadow-lg shadow-base-300">
